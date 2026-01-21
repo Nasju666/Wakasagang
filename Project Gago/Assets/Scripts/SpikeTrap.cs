@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-public class SpikeTrap : MonoBehaviour, IResettableTrap
+public class SpikeTrap : MonoBehaviour
 {
     public Transform spike;
     public Vector3 moveOffset;
@@ -10,9 +10,8 @@ public class SpikeTrap : MonoBehaviour, IResettableTrap
 
     private Vector3 startPos;
     private Vector3 targetPos;
-    private bool triggered;
-    private bool moving;
-    private Coroutine disappearRoutine;
+    private bool triggered = false;
+    private bool moving = false;
 
     void Start()
     {
@@ -22,19 +21,18 @@ public class SpikeTrap : MonoBehaviour, IResettableTrap
 
     void Update()
     {
-        if (moving)
-        {
-            spike.position = Vector3.MoveTowards(
-                spike.position,
-                targetPos,
-                moveSpeed * Time.deltaTime
-            );
+        if (!moving) return;
 
-            if (Vector3.Distance(spike.position, targetPos) < 0.01f)
-            {
-                moving = false;
-                disappearRoutine = StartCoroutine(DisappearAfterDelay());
-            }
+        spike.position = Vector3.MoveTowards(
+            spike.position,
+            targetPos,
+            moveSpeed * Time.deltaTime
+        );
+
+        if (Vector3.Distance(spike.position, targetPos) < 0.01f)
+        {
+            moving = false;
+            StartCoroutine(DisappearAfterDelay());
         }
     }
 
@@ -55,16 +53,14 @@ public class SpikeTrap : MonoBehaviour, IResettableTrap
         spike.gameObject.SetActive(false);
     }
 
-    // 🔁 RESET LOGIC
+    // 🔁 CALLED ON RESPAWN
     public void ResetTrap()
     {
-        if (disappearRoutine != null)
-            StopCoroutine(disappearRoutine);
-
-        spike.gameObject.SetActive(true);
-        spike.position = startPos;
-
+        StopAllCoroutines();
         triggered = false;
         moving = false;
+
+        spike.position = startPos;
+        spike.gameObject.SetActive(true);
     }
 }

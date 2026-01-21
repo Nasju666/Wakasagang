@@ -62,6 +62,11 @@ IEnumerator RespawnRoutine(GameObject player)
         p.ResetPlatform();
     }
 
+        foreach (SpikeTrap trap in FindObjectsOfType<SpikeTrap>())
+    {
+        trap.ResetTrap();
+    }
+
     // Disable movement before teleport
     CharacterController cc = player.GetComponent<CharacterController>();
     Rigidbody rb = player.GetComponent<Rigidbody>();
