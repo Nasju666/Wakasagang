@@ -26,12 +26,18 @@ public class PlayerMovement : MonoBehaviour
     [Header("Physics Interaction")]
     public float pushForce = 5f;
 
+    [Header("Jump Reliability")]
+public float coyoteTime = 0.15f;
+float coyoteTimer;
+
     CharacterController controller;
     Vector3 velocity;
     Vector3 moveVelocity;
 
     bool isGrounded;
     bool isCrouching;
+
+    MovingPlatform currentPlatform;
 
     void Awake()
     {
@@ -45,6 +51,7 @@ public class PlayerMovement : MonoBehaviour
         Move();
         GravityAndJump();
         AutoJump();
+        ApplyPlatformMovement();
     }
 
     // =============================
@@ -82,8 +89,10 @@ public class PlayerMovement : MonoBehaviour
         if (isGrounded && velocity.y < 0)
             velocity.y = -2f;
 
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isCrouching)
+        if (Input.GetKeyDown(KeyCode.Space) && coyoteTimer > 0f && !isCrouching)
+
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            coyoteTimer = 0f;
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
@@ -92,14 +101,34 @@ public class PlayerMovement : MonoBehaviour
     // =============================
     // GROUND CHECK
     // =============================
-    void GroundCheck()
+   void GroundCheck()
+{
+    bool groundedByController = controller.isGrounded;
+
+    bool groundedBySphere = Physics.SphereCast(
+        transform.position + Vector3.up * 0.1f,
+        controller.radius * 0.9f,
+        Vector3.down,
+        out RaycastHit hit,
+        controller.height / 2 + groundCheckDistance
+    );
+
+    isGrounded = groundedByController || groundedBySphere;
+
+    if (isGrounded)
     {
-        isGrounded = Physics.Raycast(
-            transform.position,
-            Vector3.down,
-            controller.height / 2 + groundCheckDistance
-        );
+        coyoteTimer = coyoteTime;
+        currentPlatform = hit.collider != null
+            ? hit.collider.GetComponentInParent<MovingPlatform>()
+            : null;
     }
+    else
+    {
+        coyoteTimer -= Time.deltaTime;
+        if (coyoteTimer <= 0f)
+            currentPlatform = null;
+    }
+}
 
     // =============================
     // CROUCH
@@ -151,6 +180,13 @@ public class PlayerMovement : MonoBehaviour
         rb.AddForce(pushDir * pushForce * speedFactor, ForceMode.Force);
     }
 
+
+    void ApplyPlatformMovement()
+{
+    if (currentPlatform == null) return;
+
+    controller.Move(currentPlatform.DeltaMovement);
+}
     // =============================
     // PUBLIC STATES
     // =============================
